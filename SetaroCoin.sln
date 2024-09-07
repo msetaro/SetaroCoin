@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35222.181
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SetaroCoin", "SetaroCoin\SetaroCoin.csproj", "{0DD3068D-C46F-4D3D-89C8-E031D2B3E7EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SetaroCoin", "SetaroCoin\SetaroCoin.csproj", "{0DD3068D-C46F-4D3D-89C8-E031D2B3E7EA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5AADF76-960A-4D72-90E1-79558F2CC6F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SetaroCoin.Wallet", "SetaroCoin.Wallet\SetaroCoin.Wallet.csproj", "{57C7AA2A-0E03-4D42-B93C-82EE74913DFB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,10 @@ Global
 		{0DD3068D-C46F-4D3D-89C8-E031D2B3E7EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0DD3068D-C46F-4D3D-89C8-E031D2B3E7EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0DD3068D-C46F-4D3D-89C8-E031D2B3E7EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57C7AA2A-0E03-4D42-B93C-82EE74913DFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57C7AA2A-0E03-4D42-B93C-82EE74913DFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57C7AA2A-0E03-4D42-B93C-82EE74913DFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57C7AA2A-0E03-4D42-B93C-82EE74913DFB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
