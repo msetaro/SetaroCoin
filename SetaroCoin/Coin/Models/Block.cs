@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SetaroCoin.Coin.Services;
 
-namespace SetaroCoin.Models;
+namespace SetaroCoin.Coin.Models;
 public class Block
 {
     /// <summary>
@@ -32,4 +28,10 @@ public class Block
     /// A base-64 representation of the block hash string.
     /// </summary>
     public string HashString => Convert.ToBase64String(Hash);
+
+
+    /// <summary>
+    /// Only to be used by <see cref="BlockFactory.Create"/>
+    /// </summary>
+    internal Block() {}
 }

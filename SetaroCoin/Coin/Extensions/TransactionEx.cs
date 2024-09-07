@@ -1,12 +1,9 @@
-﻿using SetaroCoin.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
+using SetaroCoin.Coin.Models;
 
-namespace SetaroCoin.Extensions;
+namespace SetaroCoin.Coin.Extensions;
 
 public static class TransactionEx
 {
