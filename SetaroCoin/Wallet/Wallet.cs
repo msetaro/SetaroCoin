@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using SetaroCoin.Coin.Enum;
 using SetaroCoin.Coin.Extensions;
 using SetaroCoin.Coin.Models;
 using SetaroCoin.Network;
@@ -17,6 +18,11 @@ public class UserWallet
     /// </summary>
     public string Address => 
         BitConverter.ToString(_keyPair.ExportSubjectPublicKeyInfo());
+    
+    /// <summary>
+    /// User's public key in bytes.
+    /// </summary>
+    public byte[] AddressBytes => _keyPair.ExportSubjectPublicKeyInfo();
 
     /// <summary>
     /// Public and private key pair of this wallet. This is used to sign transactions.
@@ -28,13 +34,22 @@ public class UserWallet
     /// </summary>
     public float Balance { get; set; }
 
+    public UserWallet()
+    {
+        Blockchain.AddNewWallet(this);
+    }
+
     /// <summary>
     /// Send SetaroCoins to another wallet.
     /// </summary>
     /// <param name="address">The address of the wallet to send to.</param>
     /// <param name="amount">The amount of coins to send to that wallet.</param>
-    public async Task<bool> Send(string address, float amount)
+    public async Task<TransactionStatus> Send(string address, float amount)
     {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"Wallet address {Address[..7]}... initiated send to {address[..7]}... of {amount} SC");
+        Console.ResetColor();
+        
         // Get the user wallet instance of the recipient
         Blockchain.PublicLedger.Instance.TryGetValue(address, out var recipient);
         
@@ -51,7 +66,10 @@ public class UserWallet
         Mempool.AddTransaction(transaction);
         
         // Wait for the transaction to complete
-        return await transaction.AwaitConfirmation();
+        var res = await transaction.AwaitConfirmation();
+        if (res != TransactionStatus.Success) Console.WriteLine($"Transaction failed | Reason: {res}");
+
+        return res;
     }
 
     /// <summary>
@@ -59,12 +77,14 @@ public class UserWallet
     /// </summary>
     /// <param name="address"></param>
     /// <param name="amount"></param>
-    private byte[] SignTransaction(string address, float amount)
+    private byte[] SignTransaction(string recipientAddress, float amount)
     {
-        byte[] addressBytes = Encoding.UTF8.GetBytes(address);
+        byte[] recipientAddressBytes = Encoding.UTF8.GetBytes(recipientAddress);
+        byte[] senderAddressBytes = Encoding.UTF8.GetBytes(Address);
         byte[] amountBytes = BitConverter.GetBytes(amount);
-        
-        return _keyPair.SignData([.. addressBytes, .. amountBytes], HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+        byte[] data = [.. senderAddressBytes, .. recipientAddressBytes, .. amountBytes];
+        return _keyPair.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
     }
 }
 

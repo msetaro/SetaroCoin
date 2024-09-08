@@ -1,6 +1,8 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using SetaroCoin.Coin.Enum;
 using SetaroCoin.Coin.Extensions;
+using SetaroCoin.Network;
 using SetaroCoin.Wallet;
 
 namespace SetaroCoin.Coin.Models;
@@ -10,8 +12,8 @@ public class Transaction
     /// <summary>
     /// A hash of the transaction.
     /// </summary>
-    public byte[] Hash => this.ToBytes();
-
+    public byte[] Hash { get; }
+    
     /// <summary>
     /// A Guid for this transaction
     /// </summary>
@@ -52,36 +54,43 @@ public class Transaction
     /// </summary>
     public List<Block> ConfirmedInBlocks { get; } = [];
 
-
+    /// <summary>
+    /// The time in which the transaction was created.
+    /// </summary>
+    public DateTime TimeOfCreation { get; init; }
+    
     /// <summary>
     /// Waits for confirmation of completion.
     /// </summary>
-    private readonly SemaphoreSlim _confirmation = new(1);
-    
+    private readonly TaskCompletionSource<TransactionStatus> _confirmation = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public Transaction()
+    {
+        Hash = this.ToBytes();
+        TimeOfCreation = DateTime.Now;
+    }
     
     /// <summary>
     /// Validates the entire transaction.
     /// </summary>
     /// <returns>True if the transaction is valid. False if it's invalid.</returns>
-    public bool Validate()
+    public TransactionStatus Validate()
     {
-        var result = false;
-        
         // Check the signature is legit
-        result &= VerifySignature();
+        if (!VerifySignature()) return TransactionStatus.InvalidSignature;
         
         // Check the sender address exists in the blockchain
         Blockchain.PublicLedger.Instance.TryGetValue(Sender.Address, out var sender);
-        result &= sender != null;
+        if(sender == null) return TransactionStatus.InvalidSenderAddress;
         
         // Check the recipient address exists in the blockchain
         Blockchain.PublicLedger.Instance.TryGetValue(Recipient?.Address ?? "", out var recipient);
-        result &= recipient != null;
-        
+        if (recipient == null) return TransactionStatus.InvalidRecipientAddress;
+
         // Check the sender actually has the tx amount in their wallet
-        result &= sender?.Balance >= Amount;
+        if (sender.Balance >= Amount) return TransactionStatus.InsufficientFunds;
         
-        return result;
+        return TransactionStatus.Success;
     }
 
     /// <summary>
@@ -91,14 +100,17 @@ public class Transaction
     private bool VerifySignature()
     {
         // Create RSA public key from sender wallet address (public key)
-        var rsa = RSA.Create();
-        rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(Sender.Address), out _);
-
-        var addressBytes = Encoding.UTF8.GetBytes(Sender.Address);
+        using var rsa = RSA.Create();
+        rsa.ImportSubjectPublicKeyInfo(Sender.AddressBytes, out _);
+        
+        var senderAddressBytes = Sender.AddressBytes;
+        var recipientAddressBytes = Recipient?.AddressBytes;
         var amountBytes = BitConverter.GetBytes(Amount);
         
+        byte[] data = [.. senderAddressBytes, .. recipientAddressBytes, .. amountBytes];
+        
         return rsa.VerifyData(
-                    addressBytes.Concat(amountBytes).ToArray(), 
+                    data,
                     SenderSignature,
                     HashAlgorithmName.SHA256, 
                     RSASignaturePadding.Pkcs1);
@@ -107,24 +119,32 @@ public class Transaction
     internal void OnTransactionConfirmed()
     {
         IsConfirmed = true;
-        _confirmation.Release();
+        _confirmation.TrySetResult(TransactionStatus.Success);
         
         // Update balances for sender and recipient
         Sender.Balance -= Amount;
         Sender.Balance -= Blockchain.TransactionFee;
+
+        Fee = Blockchain.TransactionFee;
         
         Recipient.Balance += Amount - Blockchain.TransactionFee;
+        
+        // Remove itself from the mempool
+        Mempool.RemoveTransaction(this);
+
+        Console.WriteLine($"Transaction confirmed with ID: {TransactionId}");
     }
 
-    internal void OnTransactionFailed()
+    internal void OnTransactionFailed(TransactionStatus status)
     {
         IsConfirmed = false;
-        _confirmation.Release();
+        _confirmation.TrySetResult(status);
+
+        Console.WriteLine($"Transaction failed with ID: {TransactionId} | Reason: {status}");
     }
 
-    public async Task<bool> AwaitConfirmation()
+    public async Task<TransactionStatus> AwaitConfirmation()
     {
-        await _confirmation.WaitAsync();
-        return IsConfirmed;
+        return await _confirmation.Task;
     }
 }

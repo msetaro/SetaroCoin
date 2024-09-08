@@ -1,4 +1,5 @@
-﻿using SetaroCoin.Coin.Extensions;
+﻿using SetaroCoin.Coin.Enum;
+using SetaroCoin.Coin.Extensions;
 using SetaroCoin.Coin.Models;
 
 namespace SetaroCoin.Coin.Services;
@@ -10,13 +11,26 @@ internal static class TransactionValidationService
 {
     public static void ValidateTransactions(List<Transaction> transactions)
     {
-        foreach (var transaction in transactions.ToList().Where(transaction => !transaction.Validate()))
+        try
         {
-            // Remove the transaction from the list
-            transactions.Remove(transaction);
+            foreach (var transaction in transactions.ToList())
+            {
+                var status = transaction.Validate();
+                if (status == TransactionStatus.Success) continue;
+            
+                // Remove the transaction from the list
+                transactions.Remove(transaction);
                 
-            // Set state of transaction
-            transaction.OnTransactionFailed();
+                // Set state of transaction
+                transaction.OnTransactionFailed(status);
+
+                Console.WriteLine($"Transaction Validation Failed with ID: {transaction.TransactionId} | Reason: {status}");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
         }
     }
 }

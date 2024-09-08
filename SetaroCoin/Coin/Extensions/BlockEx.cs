@@ -8,12 +8,14 @@ public static class BlockEx
 {
     internal static bool AssertNonce(this Block block)
     {
-        byte[] nonceBytes = BitConverter.GetBytes(block.Nonce);
-        byte[] merkleRoot = MerkleRootService.FindMerkleRoot(block.Transactions);
-        byte[] wholeHash = [.. nonceBytes, .. merkleRoot, .. block.PreviousHash];
-        byte[] hash = SHA256.HashData(wholeHash);
+        byte[] hash = BlockFactory.HashBlock(block);
 
-        return hash[..Blockchain.NumberOfLeadingZeroes].SequenceEqual(new byte[Blockchain.NumberOfLeadingZeroes]);
+        bool assert = hash[..Blockchain.NumberOfLeadingZeroes]
+            .SequenceEqual(new byte[Blockchain.NumberOfLeadingZeroes]);
+        
+        Console.WriteLine($"Assert Nonce -- IsValid: {assert} | Hash: {string.Join(',', hash[..10])}...");
+        
+        return assert;
     }
 
     internal static void ConfirmAllTransactions(this Block block)

@@ -5,12 +5,12 @@ using SetaroCoin.Wallet;
 
 namespace SetaroCoin.Coin.Models;
 
-internal abstract class Blockchain
+public abstract class Blockchain
 {
     /// <summary>
     /// The maximum number of transactions allowed per block.
     /// </summary>
-    public const int MaxTransactionsPerBlock = 100;
+    public const int MaxTransactionsPerBlock = 10;
 
     /// <summary>
     /// The number of leading zeroes a block hash must have to be considered completed.
@@ -69,15 +69,26 @@ internal abstract class Blockchain
         
         // Add block to blockchain
         Chain.AddLast(newBlock);
-                
+        Console.WriteLine($"New block added! Hash of new block: {newBlock.Hash}");
+        
         // Reward miner
         PublicLedger.Instance[minerWalletAddress].Balance += MiningReward;
+        Console.WriteLine($"Miner with address {minerWalletAddress} rewarded {MiningReward} SC");
         
         // Alert other miners
         OnNewBlockAdded?.Invoke(PublicLedger, Chain);
         
         return true;
+    }
 
+
+    /// <summary>
+    /// Update the ledger with the newly added wallet.
+    /// </summary>
+    /// <param name="wallet">The wallet to add to the ledger.</param>
+    public static void AddNewWallet(UserWallet wallet)
+    {
+        PublicLedger.Instance.TryAdd(wallet.Address, wallet);
     }
 }
 
