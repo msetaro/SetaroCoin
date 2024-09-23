@@ -12,11 +12,11 @@ public class Program
     private static Miner miner2;
     private static Miner miner3;
     
-    private static UserWallet user1 = new UserWallet() { Balance = 100 };
-    private static UserWallet user2 = new UserWallet() { Balance = 200 };
-    private static UserWallet user3 = new UserWallet() { Balance = 300 };
-    private static UserWallet user4 = new UserWallet() { Balance = 400 };
-    private static UserWallet user5 = new UserWallet() { Balance = 500 };
+    private static UserWallet user1 = new() { Balance = 100 };
+    private static UserWallet user2 = new() { Balance = 200 };
+    private static UserWallet user3 = new() { Balance = 300 };
+    private static UserWallet user4 = new() { Balance = 400 };
+    private static UserWallet user5 = new() { Balance = 500 };
 
 
     
@@ -54,7 +54,6 @@ public class Program
                     recipient = users[new Random().Next(0, users.Count)];
                 }
                 
-
                 Task.Run(async () => await sender.Send(recipient.Address, new Random().Next(0, 5)));
             }
             catch (Exception e)
