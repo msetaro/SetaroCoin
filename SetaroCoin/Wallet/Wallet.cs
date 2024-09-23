@@ -4,6 +4,10 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.X509;
 using SetaroCoin.Coin.Enum;
 using SetaroCoin.Coin.Extensions;
 using SetaroCoin.Coin.Models;
@@ -14,20 +18,19 @@ namespace SetaroCoin.Wallet;
 public class UserWallet
 {
     /// <summary>
-    /// Address of this wallet. This is the address that will be used to receive and send coins.
+    /// The algorithm used for transaction signatures.
     /// </summary>
-    public string Address => 
-        BitConverter.ToString(_keyPair.ExportSubjectPublicKeyInfo());
+    public const string DigitalSignatureAlgorithm = "SHA256withRSA";
     
     /// <summary>
-    /// User's public key in bytes.
+    /// Address of this wallet. This is the address that will be used to receive and send coins.
     /// </summary>
-    public byte[] AddressBytes => _keyPair.ExportSubjectPublicKeyInfo();
+    public string Address { get; }
 
     /// <summary>
     /// Public and private key pair of this wallet. This is used to sign transactions.
     /// </summary>
-    private readonly RSA _keyPair = RSA.Create();
+    private readonly AsymmetricCipherKeyPair _keyPair;
     
     /// <summary>
     /// Balance of SetaroCoins in this wallet.
@@ -36,6 +39,14 @@ public class UserWallet
 
     public UserWallet()
     {
+        // Set up key pair
+        var gen = new RsaKeyPairGenerator();
+        gen.Init(new KeyGenerationParameters(new SecureRandom(), 2048));
+        _keyPair = gen.GenerateKeyPair();
+
+        // Set up address
+        Address = Convert.ToBase64String(SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(_keyPair.Public).GetDerEncoded());
+        
         Blockchain.AddNewWallet(this);
     }
 
@@ -47,7 +58,7 @@ public class UserWallet
     public async Task<TransactionStatus> Send(string address, float amount)
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine($"Wallet address {Address[..7]}... initiated send to {address[..7]}... of {amount} SC");
+        Console.WriteLine($"Wallet address {Address[^10..]}... initiated send to {address[^10..]}... of {amount} SC");
         Console.ResetColor();
         
         // Get the user wallet instance of the recipient
@@ -79,12 +90,18 @@ public class UserWallet
     /// <param name="amount"></param>
     private byte[] SignTransaction(string recipientAddress, float amount)
     {
-        byte[] recipientAddressBytes = Encoding.UTF8.GetBytes(recipientAddress);
-        byte[] senderAddressBytes = Encoding.UTF8.GetBytes(Address);
+        byte[] recipientAddressBytes = Convert.FromBase64String(recipientAddress);
+        byte[] senderAddressBytes = Convert.FromBase64String(Address);
         byte[] amountBytes = BitConverter.GetBytes(amount);
 
         byte[] data = [.. senderAddressBytes, .. recipientAddressBytes, .. amountBytes];
-        return _keyPair.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        
+        // BC signature
+        var signer = SignerUtilities.GetSigner(DigitalSignatureAlgorithm);
+        signer.Init(true, _keyPair.Private);
+        signer.BlockUpdate(data, 0, data.Length);
+        
+        return signer.GenerateSignature();
     }
 }
 

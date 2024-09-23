@@ -61,28 +61,46 @@ public class Miner : BaseMiner
             Console.WriteLine($"Miner with ID {MinerId} waiting for transactions...");
             // Get transactions from the mempool
             var transactions = await Mempool.WaitForTransactionsAsync(Blockchain.MaxTransactionsPerBlock);
-        
-            if (_restartMiningCancellationToken.IsCancellationRequested) continue;
+
+            if (_restartMiningCancellationToken.IsCancellationRequested)
+            {
+                RestartMining();
+                continue;
+            }
 
             // Get previous block hash
             var previousHash = Blockchain.Chain.Last!.Value.Hash;
         
-            if (_restartMiningCancellationToken.IsCancellationRequested) continue;
+            if (_restartMiningCancellationToken.IsCancellationRequested)
+            {
+                RestartMining();
+                continue;
+            }
         
             // Brute force nonce
             Console.WriteLine($"Miner with ID {MinerId} calculating hash...");
             var minedBlock = BlockFactory.Create(transactions, previousHash);
         
-            if (_restartMiningCancellationToken.IsCancellationRequested) continue;
+            if (_restartMiningCancellationToken.IsCancellationRequested)
+            {
+                RestartMining();
+                continue;
+            }
 
             // Publish block
             if (Blockchain.AddBlock(minedBlock, MinerWallet.Address))
             {
-                Console.WriteLine($"Miner with ID {MinerId} successfully found a block hash: {minedBlock.Hash}.");
+                Console.WriteLine($"Miner with ID {MinerId} successfully found a block hash: {string.Join("", minedBlock.Hash[..5])}...");
             }
         }
     }
 
+    private void RestartMining()
+    {
+        _restartMiningCancellationToken = new CancellationTokenSource();
+    }
+    
+    
     /// <summary>
     /// Cancel current block mining if a new block was added to the blockchain.
     /// </summary>

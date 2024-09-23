@@ -69,11 +69,11 @@ public abstract class Blockchain
         
         // Add block to blockchain
         Chain.AddLast(newBlock);
-        Console.WriteLine($"New block added! Hash of new block: {newBlock.Hash}");
+        Console.WriteLine($"New block added! Hash of new block: {string.Join("", newBlock.Hash)}");
         
         // Reward miner
         PublicLedger.Instance[minerWalletAddress].Balance += MiningReward;
-        Console.WriteLine($"Miner with address {minerWalletAddress} rewarded {MiningReward} SC");
+        Console.WriteLine($"Miner with address {minerWalletAddress[..5]}..{minerWalletAddress[^10..]} rewarded {MiningReward} SC");
         
         // Alert other miners
         OnNewBlockAdded?.Invoke(PublicLedger, Chain);

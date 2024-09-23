@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using Org.BouncyCastle.Security;
 using SetaroCoin.Coin.Enum;
 using SetaroCoin.Coin.Extensions;
 using SetaroCoin.Network;
@@ -88,7 +89,7 @@ public class Transaction
         if (recipient == null) return TransactionStatus.InvalidRecipientAddress;
 
         // Check the sender actually has the tx amount in their wallet
-        if (sender.Balance >= Amount) return TransactionStatus.InsufficientFunds;
+        if (sender.Balance < Amount) return TransactionStatus.InsufficientFunds;
         
         return TransactionStatus.Success;
     }
@@ -99,21 +100,20 @@ public class Transaction
     /// <returns>True if the signature is valid.</returns>
     private bool VerifySignature()
     {
-        // Create RSA public key from sender wallet address (public key)
-        using var rsa = RSA.Create();
-        rsa.ImportSubjectPublicKeyInfo(Sender.AddressBytes, out _);
+        if(Recipient is null) return false;
         
-        var senderAddressBytes = Sender.AddressBytes;
-        var recipientAddressBytes = Recipient?.AddressBytes;
-        var amountBytes = BitConverter.GetBytes(Amount);
+        byte[] recipientAddressBytes = Convert.FromBase64String(Recipient.Address);
+        byte[] senderAddressBytes = Convert.FromBase64String(Sender.Address);
+        byte[] amountBytes = BitConverter.GetBytes(Amount);
         
         byte[] data = [.. senderAddressBytes, .. recipientAddressBytes, .. amountBytes];
         
-        return rsa.VerifyData(
-                    data,
-                    SenderSignature,
-                    HashAlgorithmName.SHA256, 
-                    RSASignaturePadding.Pkcs1);
+        // BC signature verification
+        var signer = SignerUtilities.GetSigner(UserWallet.DigitalSignatureAlgorithm);
+        signer.Init(false, PublicKeyFactory.CreateKey(senderAddressBytes));
+        signer.BlockUpdate(data, 0, data.Length);
+        
+        return signer.VerifySignature(SenderSignature);
     }
 
     internal void OnTransactionConfirmed()
